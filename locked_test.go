@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"sort"
 	"sync"
 	"testing"
 
@@ -80,6 +81,7 @@ func TestLocked(t *testing.T) {
 		}
 		wg.Wait()
 
+		sort.Strings(allAccounts)
 		assert.Assert(t, cmp.DeepEqual(allAccounts, []string{"one", "two"}))
 	})
 }
