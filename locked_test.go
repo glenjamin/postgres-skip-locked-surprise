@@ -171,7 +171,8 @@ func resetData(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
 		accounts(id, last_updated)
 	VALUES
 	    ('one', NOW() - INTERVAL '2 HOUR'),
-	    ('two', NOW() - INTERVAL '1 HOUR')`,
+	    ('two', NOW() - INTERVAL '1 HOUR'),
+	    ('three', NOW() - INTERVAL '1 HOUR')`,
 	)
 	assert.NilError(t, err)
 
@@ -180,7 +181,11 @@ func resetData(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
 	VALUES
 	    ('one', 'initial', 'completed'),
 	    ('one', 'incremental', 'completed'),
-	    ('two', 'initial', 'completed')`,
+	    ('two', 'initial', 'completed'),
+	    -- uncomment the following line to note the problem still occurs without INSERTs
+	    ('two', 'incremental', 'completed'),
+	    ('three', 'initial', 'failed')
+	    `,
 	)
 	assert.NilError(t, err)
 }
