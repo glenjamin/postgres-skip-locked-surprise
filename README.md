@@ -13,11 +13,11 @@ The schema itself isn't really optimal for the task at hand, but is inherited fr
 code was changed to use `SKIP LOCKED` to make it act as a queue, and as far as I can tell it
 should still work as expected.
 
-We have a table of `accounts` which have associated `imports`. Each account always has an
-`initial` import, and will eventually have an `incremental` import. The relevant code implements
+We have a table of `accounts` which have associated `imports`. Each account will eventually have
+a matching import, but initially begins without one. The relevant code implements
 queue-like behaviour, with multiple processes looking for accounts with stale data, excluding any
 accounts which have imports which do not have a status of `completed`. When a worker identifies
-accounts which are overdue for an update, the `incremental` import is set to a `pending` status
+accounts which are overdue for an update, the import is set to a `pending` status
 (creating a new row if one didn't previously exist) and an RPC call is made to begin processing
 that import.
 
@@ -28,8 +28,8 @@ produced when running a bunch of concurrent workers. I'm unsure whether there is
 bug here, or whether I've overlooked something in the way these concurrent transactions interact.
 
 The closest thing I've found to an answer for what's going on is that if I remove the requirement
-that some accounts do not yet have records for `incremental` imports, change the query to use
-`INNER` joins for both cases, and include the `incr` join in the lock - then I can no longer
+that some accounts do not yet have records for imports, change the query to use an
+`INNER` join, and include the imports table in the lock - then I can no longer
 reproduce the problem. However, I'm unable to follow why this makes a difference.
 
 ## Running

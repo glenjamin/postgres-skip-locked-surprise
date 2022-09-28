@@ -94,18 +94,16 @@ func findOverdue(ctx context.Context, pool *pgxpool.Pool) ([]string, func() erro
 
 	rows, err := tx.Query(ctx, `SELECT
 		id,
-		incr.status IS NOT NULL AS has_incr
+		i.status IS NOT NULL AS has_import
 	FROM
 		accounts a
-		INNER JOIN imports init ON a.id = init.account_id AND init.kind = 'initial'
-		LEFT JOIN imports incr ON a.id = incr.account_id AND incr.kind = 'incremental'
+		LEFT JOIN imports i ON a.id = i.account_id
 	WHERE
 	    last_updated < NOW() - INTERVAL '10 minutes'
-	AND init.status = 'completed'
-	AND (incr.status = 'completed' OR incr.status IS NULL)
+	AND (i.status = 'completed' OR i.status IS NULL)
 	ORDER BY last_updated ASC
 	LIMIT 1
-	FOR UPDATE OF a, init
+	FOR UPDATE OF a
 	SKIP LOCKED`)
 	if err != nil {
 		_ = tx.Rollback(ctx)
@@ -131,7 +129,7 @@ func findOverdue(ctx context.Context, pool *pgxpool.Pool) ([]string, func() erro
 
 	if _, err = tx.Exec(ctx, `UPDATE imports
 		SET status = 'pending'
-		WHERE kind = 'incremental' AND account_id = any($1)
+		WHERE account_id = any($1)
 	`, toUpdate); err != nil {
 		_ = tx.Rollback(ctx)
 		return accounts, nil, err
@@ -139,8 +137,8 @@ func findOverdue(ctx context.Context, pool *pgxpool.Pool) ([]string, func() erro
 
 	for _, account := range toInsert {
 		if _, err = tx.Exec(ctx, `INSERT INTO imports
-    		(account_id, kind, status)
-			VALUES ($1, 'incremental', 'pending')
+    		(account_id, status)
+			VALUES ($1, 'pending')
 		`, account); err != nil {
 			_ = tx.Rollback(ctx)
 			return accounts, nil, err
@@ -162,9 +160,8 @@ func setupSchema(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
 	assert.NilError(t, err)
 	_, err = pool.Exec(ctx, `CREATE TABLE imports(
     	account_id TEXT constraint fk_accounts references accounts on delete cascade,
-    	kind TEXT,
     	status TEXT,
-    	primary key (account_id, kind)
+    	primary key (account_id)
     )`)
 	assert.NilError(t, err)
 }
@@ -183,14 +180,12 @@ func resetData(ctx context.Context, t *testing.T, pool *pgxpool.Pool) {
 	assert.NilError(t, err)
 
 	_, err = pool.Exec(ctx, `INSERT INTO
-		imports(account_id, kind, status)
+		imports(account_id, status)
 	VALUES
-	    ('one', 'initial', 'completed'),
-	    ('one', 'incremental', 'completed'),
-	    ('two', 'initial', 'completed'),
+	    ('one', 'completed'),
 	    -- uncomment the following line to note the problem still occurs without INSERTs
-	    ('two', 'incremental', 'completed'),
-	    ('three', 'initial', 'failed')
+	    -- ('two', 'completed'),
+	    ('three', 'failed')
 	    `,
 	)
 	assert.NilError(t, err)
