@@ -28,17 +28,17 @@ func TestLocked(t *testing.T) {
 	t.Run("two runs find matches, then queue is empty", func(t *testing.T) {
 		resetData(ctx, t, pool)
 
-		accounts, commit, err := findOverdue(ctx, t, pool)
+		accounts, commit, err := findOverdue(ctx, pool)
 		assert.NilError(t, err)
 		assert.Check(t, cmp.DeepEqual(accounts, []string{"one"}))
 		assert.NilError(t, commit())
 
-		accounts, commit, err = findOverdue(ctx, t, pool)
+		accounts, commit, err = findOverdue(ctx, pool)
 		assert.NilError(t, err)
 		assert.Check(t, cmp.DeepEqual(accounts, []string{"two"}))
 		assert.NilError(t, commit())
 
-		accounts, commit, err = findOverdue(ctx, t, pool)
+		accounts, commit, err = findOverdue(ctx, pool)
 		assert.NilError(t, err)
 		assert.Check(t, cmp.Len(accounts, 0))
 		assert.NilError(t, commit())
@@ -47,11 +47,11 @@ func TestLocked(t *testing.T) {
 	t.Run("interleaved runs don't compete", func(t *testing.T) {
 		resetData(ctx, t, pool)
 
-		accounts1, commit1, err := findOverdue(ctx, t, pool)
+		accounts1, commit1, err := findOverdue(ctx, pool)
 		assert.NilError(t, err)
 		assert.Check(t, cmp.DeepEqual(accounts1, []string{"one"}))
 
-		accounts2, commit2, err := findOverdue(ctx, t, pool)
+		accounts2, commit2, err := findOverdue(ctx, pool)
 		assert.NilError(t, err)
 		assert.Check(t, cmp.DeepEqual(accounts2, []string{"two"}))
 
@@ -69,7 +69,7 @@ func TestLocked(t *testing.T) {
 		for i := 0; i < 20; i++ {
 			go func() {
 				defer wg.Done()
-				accounts, commit, err := findOverdue(ctx, t, pool)
+				accounts, commit, err := findOverdue(ctx, pool)
 				mu.Lock()
 				defer mu.Unlock()
 				assert.Check(t, err)
@@ -86,7 +86,7 @@ func TestLocked(t *testing.T) {
 	})
 }
 
-func findOverdue(ctx context.Context, t *testing.T, pool *pgxpool.Pool) ([]string, func() error, error) {
+func findOverdue(ctx context.Context, pool *pgxpool.Pool) ([]string, func() error, error) {
 	tx, err := pool.Begin(ctx)
 	if err != nil {
 		return nil, nil, err
