@@ -1,0 +1,10 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: "postgres:14-alpine"
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      PGUSER: postgres # make it so `exec psql` works
+    ports:
+      - 127.0.0.1:5432:5432
