@@ -129,15 +129,19 @@ func findOverdue(ctx context.Context, pool *pgxpool.Pool) ([]string, func() erro
 
 	accounts := append(toUpdate, toInsert...)
 
-	_, err = tx.Exec(ctx, `UPDATE imports SET status = 'pending' WHERE kind = 'incremental' AND account_id = any($1)`, toUpdate)
-	if err != nil {
+	if _, err = tx.Exec(ctx, `UPDATE imports
+		SET status = 'pending'
+		WHERE kind = 'incremental' AND account_id = any($1)
+	`, toUpdate); err != nil {
 		_ = tx.Rollback(ctx)
 		return accounts, nil, err
 	}
 
 	for _, account := range toInsert {
-		_, err = tx.Exec(ctx, `INSERT INTO imports(account_id, kind, status) VALUES ($1, 'incremental', 'pending')`, account)
-		if err != nil {
+		if _, err = tx.Exec(ctx, `INSERT INTO imports
+    		(account_id, kind, status)
+			VALUES ($1, 'incremental', 'pending')
+		`, account); err != nil {
 			_ = tx.Rollback(ctx)
 			return accounts, nil, err
 		}
