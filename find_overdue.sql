@@ -1,6 +1,6 @@
 BEGIN;
 
-\set id 'none'
+\set id 'nothing'
 
 SELECT
     id

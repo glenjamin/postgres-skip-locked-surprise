@@ -22,8 +22,8 @@ accounts which are overdue for an update, the import is set to a `pending` statu
 that import.
 
 My understanding of the combination of `FOR UPDATE` and `SKIP LOCKED` should mean that worker
-processes all select disjoint subsets of rows, and therefore we should never get duplicate messages.
-The surprising and possibly buggy behaviour is that we do occasionally get duplicate messages
+processes all select disjoint subsets of rows, and therefore we should never get duplicate accounts.
+The surprising and possibly buggy behaviour is that we do occasionally get duplicate accounts
 produced when running a bunch of concurrent workers. I'm unsure whether there is actually a postgres
 bug here, or whether I've overlooked something in the way these concurrent transactions interact.
 
@@ -39,12 +39,19 @@ Start a postgres instance
 docker compose up -d
 ```
 
-Run the general tests which should pass
+Setup the schema
 ```
-go test .
+cat setup.sql | docker compose exec -T postgres psql
 ```
 
-Run a soak test to (sometimes) trigger the unexpected behaviour
+Run the query, this should match 'one' the first time and 'nothing' after that
 ```
-go test . -run '/race' -count=100
+cat find_overdue.sql | docker compose exec -T postgres psql
 ```
+
+To reproduce the bug requires running find_overdue.sql lots of times at once.
+We should expect that 'one' only appears once.
+
+## Via Go
+
+The `go/` subdir contains a program which demonstrates the issue, including the concurrency orchestration.
